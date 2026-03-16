@@ -194,15 +194,38 @@
   }
 
   /* ─ メモ ─ */
-  .notes-area {
-    width: 100%; min-height: 140px;
-    background: var(--sur2); border: 1.5px solid var(--bdr);
-    border-radius: 10px; color: var(--t1); padding: 14px;
-    font-size: 0.84rem; line-height: 1.75; resize: vertical;
-    outline: none; font-family: inherit; transition: border-color 0.18s, box-shadow 0.18s;
+  .meeting-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--teal-lo); border: 1px solid rgba(13,148,136,0.2);
+    border-radius: 9px; padding: 10px 14px; margin-bottom: 14px;
   }
-  .notes-area:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
-  .notes-area::placeholder { color: var(--t3); }
+  .meeting-label { font-size: 0.72rem; font-weight: 700; color: var(--teal); white-space: nowrap; }
+  .meeting-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-size: 0.82rem; color: var(--t1); font-family: inherit;
+    border-bottom: 1px dashed rgba(13,148,136,0.4);
+  }
+  .meeting-input::placeholder { color: var(--t3); }
+  .log-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .log-input {
+    flex: 1; background: var(--sur2); border: 1.5px solid var(--bdr);
+    border-radius: 9px; color: var(--t1); padding: 10px 14px;
+    font-size: 0.82rem; outline: none; font-family: inherit;
+    transition: border-color 0.18s;
+  }
+  .log-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+  .log-input::placeholder { color: var(--t3); }
+  .log-list { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .log-item {
+    display: flex; gap: 10px; padding: 9px 12px;
+    background: var(--sur2); border: 1px solid var(--bdr);
+    border-radius: 8px; align-items: flex-start;
+  }
+  .log-time { font-size: 0.62rem; color: var(--t3); white-space: nowrap; padding-top: 2px; min-width: 80px; }
+  .log-text { font-size: 0.8rem; color: var(--t1); flex: 1; line-height: 1.6; }
+  .log-del { background: none; border: none; color: var(--t3); cursor: pointer; font-size: 0.75rem; padding: 0 4px; transition: color 0.13s; }
+  .log-del:hover { color: var(--red); }
+  .log-empty { font-size: 0.75rem; color: var(--t3); text-align: center; padding: 20px 0; }
 
   /* ─ Sync Modal ─ */
   .overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
@@ -378,7 +401,18 @@
         <div class="card-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0">議事録・メモ</div>
         <span class="badge badge-teal">全員が編集可</span>
       </div>
-      <textarea class="notes-area" id="notesArea" placeholder="議事録・連絡事項・メモを入力…"></textarea>
+      <!-- 次回打ち合わせ -->
+      <div class="meeting-row">
+        <span class="meeting-label">📅 次回打ち合わせ</span>
+        <input class="meeting-input" id="meetingInput" placeholder="日時を入力（例：4月3日 14:00）">
+      </div>
+      <!-- メモ入力 -->
+      <div class="log-input-row">
+        <input class="log-input" id="logInput" placeholder="メモを入力してEnterまたは追加ボタン…">
+        <button class="btn btn-teal" id="logAddBtn">追加</button>
+      </div>
+      <!-- メモ一覧 -->
+      <div class="log-list" id="logList"></div>
     </div>
   </div>
 
@@ -607,7 +641,9 @@ dbRef.on('value', (snapshot) => {
   if (val.updatedBy === CLIENT_ID) return; // 自分の保存はスキップ
   data = val;
   if (!data.gantt) data.gantt = JSON.parse(JSON.stringify(GANTT_DEFAULT));
+  if (!data.logs) data.logs = [];
   renderAll();
+  renderLogList();
   if (!firstLoad) toast('🔄 最新データを受信しました');
   firstLoad = false;
 });
@@ -813,12 +849,59 @@ function renderComps() {
 //  メモ
 // ══════════════════════════════════════════════
 function initNotes() {
-  const el = document.getElementById('notesArea');
-  el.value = data.notes || '';
-  let t = null;
-  el.addEventListener('input', () => {
-    clearTimeout(t);
-    t = setTimeout(() => { data.notes = el.value; save(); }, 600);
+  if (!data.logs) data.logs = [];
+  if (data.nextMeeting === undefined) data.nextMeeting = '';
+
+  // 次回打ち合わせ
+  const meetingEl = document.getElementById('meetingInput');
+  meetingEl.value = data.nextMeeting || '';
+  let mt = null;
+  meetingEl.addEventListener('input', () => {
+    clearTimeout(mt);
+    mt = setTimeout(() => { data.nextMeeting = meetingEl.value; save(); }, 600);
+  });
+
+  // メモ追加
+  const logInput = document.getElementById('logInput');
+  const addLog = () => {
+    const text = logInput.value.trim();
+    if (!text) return;
+    if (!data.logs) data.logs = [];
+    data.logs.unshift({
+      id: 'log_' + Date.now(),
+      text,
+      at: new Date().toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
+    });
+    logInput.value = '';
+    save();
+    renderLogList();
+  };
+  document.getElementById('logAddBtn').addEventListener('click', addLog);
+  logInput.addEventListener('keydown', e => { if (e.key === 'Enter') addLog(); });
+
+  renderLogList();
+}
+
+function renderLogList() {
+  const logs = data.logs || [];
+  const el = document.getElementById('logList');
+  if (!el) return;
+  if (logs.length === 0) {
+    el.innerHTML = '<div class="log-empty">まだメモがありません</div>';
+    return;
+  }
+  el.innerHTML = logs.map(log => `
+    <div class="log-item">
+      <span class="log-time">${log.at}</span>
+      <span class="log-text">${log.text.replace(/</g,'&lt;')}</span>
+      <button class="log-del" data-lid="${log.id}" title="削除">✕</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('.log-del').forEach(btn => {
+    btn.addEventListener('click', e => {
+      data.logs = data.logs.filter(l => l.id !== e.target.dataset.lid);
+      save(); renderLogList();
+    });
   });
 }
 
