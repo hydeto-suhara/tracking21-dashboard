@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking21 リニューアル ダッシュボード</title>
+<style>
+  :root {
+    --bg:      #f0f4f8;
+    --sur:     #ffffff;
+    --sur2:    #f8fafc;
+    --bdr:     #e2e8f0;
+    --bdr-hi:  #94d4cc;
+    --teal:    #0d9488;
+    --teal-hi: #0f766e;
+    --teal-lo: rgba(13,148,136,0.08);
+    --green:   #059669;
+    --yellow:  #d97706;
+    --red:     #dc2626;
+    --t1: #0f172a;
+    --t2: #475569;
+    --t3: #94a3b8;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+    --r: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--t1);
+    font-family: -apple-system,'Segoe UI','Hiragino Sans','Meiryo',sans-serif;
+    min-height: 100vh; font-size: 14px;
+  }
+
+  /* ─ Header ─ */
+  .topbar {
+    background: #ffffff;
+    border-bottom: 1px solid var(--bdr);
+    padding: 0 28px;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .topbar-logo {
+    font-size: 0.72rem; letter-spacing: 0.25em; color: var(--teal);
+    text-transform: uppercase; font-weight: 700;
+    padding: 4px 10px; background: var(--teal-lo);
+    border-radius: 6px; border: 1px solid rgba(13,148,136,0.15);
+  }
+  .topbar-sep  { color: var(--bdr); font-size: 1.2rem; }
+  .topbar-title { font-size: 0.82rem; color: var(--t2); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .last-updated { font-size: 0.68rem; color: var(--t3); margin-right: 6px; }
+
+  .btn {
+    padding: 7px 16px; border: 1px solid transparent; border-radius: 8px;
+    font-size: 0.78rem; cursor: pointer; font-weight: 600;
+    transition: all 0.15s; letter-spacing: 0.02em; line-height: 1;
+  }
+  .btn-teal {
+    background: var(--teal); color: #fff; border-color: var(--teal);
+    box-shadow: 0 1px 3px rgba(13,148,136,0.3);
+  }
+  .btn-teal:hover { background: var(--teal-hi); border-color: var(--teal-hi); box-shadow: 0 2px 6px rgba(13,148,136,0.35); }
+  .btn-ghost { background: #fff; color: var(--t2); border-color: var(--bdr); }
+  .btn-ghost:hover { border-color: var(--bdr-hi); color: var(--t1); background: var(--sur2); }
+  .btn-green { background: rgba(5,150,105,0.08); color: var(--green); border-color: rgba(5,150,105,0.25); }
+  .btn-green:hover { background: rgba(5,150,105,0.14); }
+
+  /* ─ Layout ─ */
+  .main { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+
+  /* ─ Card ─ */
+  .card {
+    background: var(--sur); border: 1px solid var(--bdr);
+    border-radius: var(--r); padding: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-title {
+    font-size: 0.6rem; letter-spacing: 0.45em; color: var(--t3);
+    text-transform: uppercase; font-weight: 700;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--bdr);
+  }
+
+  /* ─ 進捗サマリ ─ */
+  .summary-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 12px; margin-bottom: 16px; }
+  .sum-card {
+    background: var(--sur); border: 1px solid var(--bdr);
+    border-radius: var(--r); padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .sum-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .sum-val  { font-size: 2.1rem; font-weight: 800; color: var(--teal); line-height: 1; letter-spacing: -0.02em; }
+  .sum-sub  { font-size: 0.65rem; color: var(--t3); margin-top: 5px; font-weight: 500; }
+  .sum-bar  { height: 3px; background: var(--bg); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .sum-bar-fill { height: 100%; background: var(--teal); border-radius: 2px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+  /* ─ マイルストーン ─ */
+  .milestone {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 12px 0; border-bottom: 1px solid var(--bdr);
+  }
+  .milestone:last-child { border-bottom: none; padding-bottom: 0; }
+  .ms-month {
+    font-size: 0.68rem; color: var(--teal); font-weight: 700;
+    width: 52px; flex-shrink: 0; padding-top: 2px;
+    letter-spacing: -0.01em;
+  }
+  .ms-goal  { font-size: 0.82rem; color: var(--t1); font-weight: 600; margin-bottom: 3px; }
+  .ms-tasks { font-size: 0.68rem; color: var(--t3); line-height: 1.6; }
+  .ms-status { flex-shrink: 0; margin-top: 1px; }
+  select.status-sel {
+    background: var(--sur2); border: 1px solid var(--bdr); color: var(--t2);
+    border-radius: 7px; padding: 5px 10px; font-size: 0.72rem; cursor: pointer;
+    outline: none; font-family: inherit; font-weight: 600; transition: all 0.15s;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+    padding-right: 26px;
+  }
+  select.status-sel.done    { border-color: #6ee7b7; color: var(--green); background-color: rgba(5,150,105,0.07); }
+  select.status-sel.wip     { border-color: #fcd34d; color: var(--yellow); background-color: rgba(217,119,6,0.07); }
+  select.status-sel.pending { border-color: var(--bdr); color: var(--t3); }
+
+  /* ─ ページチェックリスト ─ */
+  .cat-section { margin-bottom: 8px; }
+  .cat-header {
+    display: flex; align-items: center; gap: 10px; padding: 11px 16px;
+    background: var(--sur2); border: 1px solid var(--bdr); border-radius: 10px;
+    cursor: pointer; transition: all 0.15s; user-select: none;
+  }
+  .cat-header:hover { border-color: var(--bdr-hi); background: #f0fdf9; box-shadow: var(--shadow-sm); }
+  .cat-name  { font-size: 0.8rem; font-weight: 600; color: var(--t1); flex: 1; }
+  .cat-prog  { font-size: 0.68rem; color: var(--t2); font-weight: 600; }
+  .cat-bar   { width: 80px; height: 5px; background: var(--bdr); border-radius: 3px; overflow: hidden; }
+  .cat-bar-fill { height: 100%; background: var(--teal); border-radius: 3px; transition: width 0.3s; }
+  .cat-arrow { font-size: 0.62rem; color: var(--t3); transition: transform 0.2s; }
+  .cat-arrow.open { transform: rotate(90deg); }
+  .cat-body {
+    border: 1px solid var(--bdr); border-top: none;
+    border-radius: 0 0 10px 10px; overflow: hidden; display: none;
+    background: #fff;
+  }
+  .cat-body.open { display: block; }
+
+  .page-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 16px; border-bottom: 1px solid var(--bg);
+    transition: background 0.12s;
+  }
+  .page-row:last-child { border-bottom: none; }
+  .page-row:hover { background: #f8fffe; }
+  .page-num   { font-size: 0.62rem; color: var(--t3); width: 22px; flex-shrink: 0; text-align: right; font-weight: 500; }
+  .page-name  { font-size: 0.8rem; color: var(--t1); flex: 1; }
+  .page-url   { font-size: 0.65rem; color: var(--t3); flex: 1; font-family: 'SF Mono', Consolas, monospace; }
+  .page-status-btn {
+    padding: 4px 11px; border-radius: 6px; font-size: 0.65rem; font-weight: 700;
+    cursor: pointer; border: 1px solid; transition: all 0.13s; white-space: nowrap;
+    background: transparent; font-family: inherit;
+  }
+  .page-status-btn.s-todo { color: var(--t3); border-color: var(--bdr); }
+  .page-status-btn.s-todo:hover { border-color: var(--t3); color: var(--t2); }
+  .page-status-btn.s-wip  { color: var(--yellow); border-color: #fcd34d; background: rgba(217,119,6,0.07); }
+  .page-status-btn.s-done { color: var(--green);  border-color: #6ee7b7; background: rgba(5,150,105,0.07); }
+
+  /* ─ コンポーネント ─ */
+  .comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 8px; }
+  .comp-item {
+    display: flex; align-items: center; gap: 10px; padding: 11px 13px;
+    background: var(--sur2); border: 1px solid var(--bdr); border-radius: 9px;
+    cursor: pointer; transition: all 0.14s;
+  }
+  .comp-item:hover { border-color: var(--bdr-hi); box-shadow: var(--shadow-sm); background: #f0fdf9; }
+  .comp-item.done  { border-color: #6ee7b7; background: rgba(5,150,105,0.05); }
+  .comp-item.wip   { border-color: #fcd34d; background: rgba(217,119,6,0.05); }
+  .comp-check {
+    width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--bdr);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; transition: all 0.14s; background: #fff;
+  }
+  .comp-item.done .comp-check { background: rgba(5,150,105,0.12); border-color: #34d399; color: var(--green); font-weight: 700; }
+  .comp-item.wip  .comp-check { background: rgba(217,119,6,0.1);  border-color: #fbbf24; color: var(--yellow); }
+  .comp-name  { font-size: 0.76rem; color: var(--t1); flex: 1; font-weight: 500; }
+  .comp-badge {
+    font-size: 0.58rem; color: var(--t3); padding: 2px 7px;
+    border: 1px solid var(--bdr); border-radius: 4px; background: #fff;
+    white-space: nowrap;
+  }
+
+  /* ─ メモ ─ */
+  .notes-area {
+    width: 100%; min-height: 140px;
+    background: var(--sur2); border: 1.5px solid var(--bdr);
+    border-radius: 10px; color: var(--t1); padding: 14px;
+    font-size: 0.84rem; line-height: 1.75; resize: vertical;
+    outline: none; font-family: inherit; transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  .notes-area:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+  .notes-area::placeholder { color: var(--t3); }
+
+  /* ─ Sync Modal ─ */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .overlay.show { display: flex; }
+  .modal-box {
+    background: #fff; border: 1px solid var(--bdr); border-radius: 16px;
+    padding: 30px; max-width: 460px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06);
+  }
+  .modal-box h3 { font-size: 1rem; color: var(--t1); margin-bottom: 8px; font-weight: 700; }
+  .modal-box p  { font-size: 0.78rem; color: var(--t2); line-height: 1.7; margin-bottom: 16px; }
+  .code-area {
+    width: 100%; height: 80px;
+    background: var(--sur2); border: 1.5px solid var(--bdr); border-radius: 9px;
+    color: var(--teal); padding: 10px 12px; font-size: 0.7rem;
+    font-family: 'SF Mono', Consolas, monospace; resize: none; outline: none;
+    transition: border-color 0.15s;
+  }
+  .code-area:focus { border-color: var(--teal); }
+  .modal-btns { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+
+  /* ─ Toast ─ */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(70px);
+    background: var(--t1); color: #fff;
+    padding: 11px 24px; border-radius: 10px;
+    font-size: 0.8rem; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    transition: transform 0.3s cubic-bezier(0.34,1.5,0.64,1);
+    z-index: 9999; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─ Misc ─ */
+  .section-gap { margin-bottom: 16px; }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 5px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; }
+  .badge-teal   { background: var(--teal-lo); color: var(--teal); border: 1px solid rgba(13,148,136,0.2); }
+  .badge-yellow { background: rgba(217,119,6,0.08); color: var(--yellow); border: 1px solid rgba(217,119,6,0.25); }
+  .badge-green  { background: rgba(5,150,105,0.08); color: var(--green); border: 1px solid rgba(5,150,105,0.25); }
+
+  /* ─ リンクカード ─ */
+  .link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 10px; }
+  .link-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--sur2);
+    border: 1px solid var(--bdr); border-radius: 10px;
+    text-decoration: none; color: inherit; transition: all 0.15s;
+  }
+  .link-card:hover { border-color: var(--bdr-hi); box-shadow: var(--shadow-sm); background: #f0fdf9; transform: translateY(-1px); }
+  .link-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .link-body { flex: 1; min-width: 0; }
+  .link-title { font-size: 0.8rem; font-weight: 600; color: var(--t1); }
+  .link-desc  { font-size: 0.65rem; color: var(--t3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .link-ext   { font-size: 0.65rem; color: var(--t3); flex-shrink: 0; }
+
+  /* ─ ガントチャート v2 ─ */
+  .gantt-wrap { overflow-x: auto; }
+  .gantt-table { min-width: 680px; border-collapse: collapse; width: 100%; }
+  .gantt-table th, .gantt-table td { border: 1px solid var(--bdr); }
+  .gantt-name-head {
+    text-align: left; font-size: 0.6rem; font-weight: 700; color: var(--t3);
+    padding: 6px 10px; background: var(--sur2); white-space: nowrap;
+    min-width: 155px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .gantt-st-head {
+    text-align: center; font-size: 0.6rem; font-weight: 700; color: var(--t3);
+    padding: 6px 4px; background: var(--sur2); width: 32px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .gantt-col-head { text-align: center; background: var(--sur2); padding: 0; min-width: 72px; }
+  .gantt-col-input {
+    background: transparent; border: none; outline: none; width: 100%;
+    text-align: center; font-size: 0.65rem; font-weight: 700; color: var(--t2);
+    font-family: inherit; cursor: pointer; padding: 6px 4px; transition: color 0.15s;
+  }
+  .gantt-col-input:focus { color: var(--teal); background: rgba(13,148,136,0.05); cursor: text; }
+  .gantt-task-name-cell {
+    padding: 6px 10px; font-size: 0.75rem; font-weight: 500; color: var(--t1);
+    white-space: nowrap; background: #fff; vertical-align: middle;
+  }
+  .gantt-task-row:hover .gantt-task-name-cell { background: #f8fffe; }
+  .gantt-status-cell { text-align: center; background: #fff; vertical-align: middle; padding: 0; width: 32px; }
+  .gantt-status-dot {
+    width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .gantt-status-dot:hover { transform: scale(1.4); }
+  .gantt-status-dot.pending { background: #cbd5e1; }
+  .gantt-status-dot.wip     { background: var(--yellow); }
+  .gantt-status-dot.done    { background: var(--green); }
+  .gantt-cell-empty { background: var(--bg); height: 34px; }
+  .gantt-cell-bar   { height: 34px; padding: 5px 0; background: #fff; }
+  .gantt-bar-inner  { height: 100%; }
+  .gantt-bar-start  .gantt-bar-inner { border-radius: 4px 0 0 4px; margin-left: 4px; }
+  .gantt-bar-middle .gantt-bar-inner { border-radius: 0; }
+  .gantt-bar-end    .gantt-bar-inner { border-radius: 0 4px 4px 0; margin-right: 4px; }
+  .gantt-bar-only   .gantt-bar-inner { border-radius: 4px; margin: 0 4px; }
+  .gantt-bar-pending .gantt-bar-inner { background: #cbd5e1; }
+  .gantt-bar-wip    .gantt-bar-inner { background: var(--yellow); }
+  .gantt-bar-done   .gantt-bar-inner { background: var(--green); }
+  .gantt-legend { display: flex; gap: 14px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+  .gantt-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.65rem; color: var(--t2); }
+  .gantt-legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .gantt-name-input {
+    background: transparent; border: none; outline: none; width: 100%;
+    font-size: 0.75rem; font-weight: 500; color: var(--t1); font-family: inherit;
+    cursor: pointer; padding: 0;
+  }
+  .gantt-name-input:focus { color: var(--teal); cursor: text; border-bottom: 1px dashed var(--teal); }
+  .gantt-sel {
+    background: var(--sur2); border: 1px solid var(--bdr); border-radius: 5px;
+    font-size: 0.62rem; color: var(--t2); font-family: inherit;
+    padding: 2px 4px; cursor: pointer; outline: none; max-width: 72px;
+  }
+  .gantt-sel:focus { border-color: var(--teal); }
+  .gantt-range-cell { background: #fff; text-align: center; padding: 3px; white-space: nowrap; vertical-align: middle; }
+  .gantt-del-btn {
+    background: none; border: none; cursor: pointer; color: var(--t3);
+    font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; transition: all 0.13s;
+  }
+  .gantt-del-btn:hover { background: rgba(220,38,38,0.08); color: var(--red); }
+  .gantt-add-btn {
+    margin-top: 10px; background: var(--sur2); border: 1px dashed var(--bdr);
+    border-radius: 8px; padding: 8px 16px; font-size: 0.75rem; color: var(--t2);
+    cursor: pointer; width: 100%; text-align: left; font-family: inherit;
+    transition: all 0.15s;
+  }
+  .gantt-add-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-lo); }
+
+  @media (max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: repeat(2,1fr); }
+    .topbar { flex-direction: column; gap: 10px; align-items: flex-start; height: auto; padding: 12px 16px; }
+    .page-url { display: none; }
+  }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<!-- ─ Topbar ─ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">Tracking21</div>
+    <div class="topbar-sep">|</div>
+    <div class="topbar-title">リニューアル プロジェクト ダッシュボード</div>
+  </div>
+  <div class="topbar-right">
+    <span class="last-updated" id="lastUpdated"></span>
+    <button class="btn btn-ghost" id="btnImport">📥 同期コードを読み込む</button>
+    <button class="btn btn-teal"  id="btnExport">📤 同期コードをコピー</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ─ 進捗サマリ ─ -->
+  <div class="summary-cards" id="summaryCards"></div>
+
+  <!-- ─ スケジュール & メモ ─ -->
+  <div class="grid-2 section-gap">
+    <!-- マイルストーン -->
+    <div class="card">
+      <div class="card-title">マイルストーン</div>
+      <div id="milestones"></div>
+    </div>
+    <!-- メモ -->
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0">議事録・メモ</div>
+        <span class="badge badge-teal">全員が編集可</span>
+      </div>
+      <textarea class="notes-area" id="notesArea" placeholder="議事録・連絡事項・メモを入力…"></textarea>
+    </div>
+  </div>
+
+  <!-- ─ ページ移行チェックリスト ─ -->
+  <div class="card section-gap">
+    <div class="flex-between" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0">ページ移行チェックリスト</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge badge-yellow" id="totalWip">作業中 0</span>
+        <span class="badge badge-green"  id="totalDone">完了 0/87</span>
+      </div>
+    </div>
+    <div id="pageList"></div>
+  </div>
+
+  <!-- ─ コンポーネント管理 ─ -->
+  <div class="card section-gap">
+    <div class="card-title">Framer コンポーネント管理</div>
+    <div class="comp-grid" id="compGrid"></div>
+  </div>
+
+  <!-- ─ リンクカード ─ -->
+  <div class="card section-gap">
+    <div class="card-title">リンク集</div>
+    <div class="link-grid" id="linkGrid"></div>
+  </div>
+
+  <!-- ─ ガントチャート ─ -->
+  <div class="card section-gap">
+    <div class="card-title">ガントチャート</div>
+    <div class="gantt-wrap" id="ganttChart"></div>
+  </div>
+
+</div>
+
+<!-- ─ Sync Modal ─ -->
+<div class="overlay" id="syncOverlay">
+  <div class="modal-box">
+    <h3 id="syncTitle">同期コードを読み込む</h3>
+    <p id="syncDesc">佐藤さんから受け取ったコードを貼り付けてください。</p>
+    <textarea class="code-area" id="syncCodeArea" placeholder="コードをここに貼り付け…"></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" id="syncCancel">キャンセル</button>
+      <button class="btn btn-teal"  id="syncConfirm">読み込む</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  マスターデータ
+// ══════════════════════════════════════════════
+const PAGES = [
+  // 固定ページ（5）
+  { id:'fp1',  cat:'fixed',    name:'TOP（トップページ）',              url:'/' },
+  { id:'fp2',  cat:'fixed',    name:'会社概要',                          url:'/company/' },
+  { id:'fp3',  cat:'fixed',    name:'お問い合わせ',                      url:'/contact/' },
+  { id:'fp4',  cat:'fixed',    name:'プライバシーポリシー',              url:'/privacy/' },
+  { id:'fp5',  cat:'fixed',    name:'サイトマップ',                      url:'/sitemap/' },
+  // 製品情報（30）
+  { id:'pr1',  cat:'products', name:'製品一覧（トップ）',                url:'/products/' },
+  { id:'pr2',  cat:'products', name:'GPSテレメトリー 一覧',              url:'/products/gps/' },
+  { id:'pr3',  cat:'products', name:'GPS首輪（大型獣用）',               url:'/products/gps-collar-large/' },
+  { id:'pr4',  cat:'products', name:'GPS首輪（中型獣用）',               url:'/products/gps-collar-medium/' },
+  { id:'pr5',  cat:'products', name:'GPS首輪（小型獣用）',               url:'/products/gps-collar-small/' },
+  { id:'pr6',  cat:'products', name:'GPS耳標',                            url:'/products/gps-ear-tag/' },
+  { id:'pr7',  cat:'products', name:'GPS翼標（鳥類用）',                 url:'/products/gps-wing-tag/' },
+  { id:'pr8',  cat:'products', name:'VHF発信機 一覧',                    url:'/products/vhf/' },
+  { id:'pr9',  cat:'products', name:'VHF首輪（標準型）',                 url:'/products/vhf-collar/' },
+  { id:'pr10', cat:'products', name:'VHF耳標',                            url:'/products/vhf-ear-tag/' },
+  { id:'pr11', cat:'products', name:'追跡受信機 一覧',                   url:'/products/receivers/' },
+  { id:'pr12', cat:'products', name:'ハンディ受信機',                    url:'/products/handy-receiver/' },
+  { id:'pr13', cat:'products', name:'車載受信機',                        url:'/products/car-receiver/' },
+  { id:'pr14', cat:'products', name:'自動受信システム',                  url:'/products/auto-receiver/' },
+  { id:'pr15', cat:'products', name:'アンテナ 一覧',                     url:'/products/antennas/' },
+  { id:'pr16', cat:'products', name:'八木アンテナ',                      url:'/products/yagi-antenna/' },
+  { id:'pr17', cat:'products', name:'車載アンテナ',                      url:'/products/car-antenna/' },
+  { id:'pr18', cat:'products', name:'固定局アンテナ',                    url:'/products/fixed-antenna/' },
+  { id:'pr19', cat:'products', name:'データロガー',                      url:'/products/data-logger/' },
+  { id:'pr20', cat:'products', name:'ANIMAL MAP（クラウド管理）',        url:'/products/animal-map/' },
+  { id:'pr21', cat:'products', name:'GPS首輪（クマ専用）',               url:'/products/bear-collar/' },
+  { id:'pr22', cat:'products', name:'GPS首輪（シカ専用）',               url:'/products/deer-collar/' },
+  { id:'pr23', cat:'products', name:'GPS首輪（サル専用）',               url:'/products/monkey-collar/' },
+  { id:'pr24', cat:'products', name:'センサーカメラ',                    url:'/products/sensor-camera/' },
+  { id:'pr25', cat:'products', name:'バッテリー・充電器',                url:'/products/battery/' },
+  { id:'pr26', cat:'products', name:'交換パーツ一覧',                    url:'/products/parts/' },
+  { id:'pr27', cat:'products', name:'レンタル機器',                      url:'/products/rental/' },
+  { id:'pr28', cat:'products', name:'修理・メンテナンス',                url:'/products/repair/' },
+  { id:'pr29', cat:'products', name:'製品カタログ（PDF）',               url:'/products/catalog/' },
+  { id:'pr30', cat:'products', name:'製品比較ページ',                    url:'/products/comparison/' },
+  // 活用事例（20）
+  { id:'uc1',  cat:'usecases', name:'活用事例 一覧',                     url:'/use-cases/' },
+  { id:'uc2',  cat:'usecases', name:'事例：ツキノワグマの行動追跡',      url:'/use-cases/bear/' },
+  { id:'uc3',  cat:'usecases', name:'事例：ニホンジカの個体数管理',      url:'/use-cases/deer/' },
+  { id:'uc4',  cat:'usecases', name:'事例：ニホンザルの農業被害対策',    url:'/use-cases/monkey/' },
+  { id:'uc5',  cat:'usecases', name:'事例：イノシシ被害防止',            url:'/use-cases/boar/' },
+  { id:'uc6',  cat:'usecases', name:'事例：渡り鳥の移動経路調査',        url:'/use-cases/birds/' },
+  { id:'uc7',  cat:'usecases', name:'事例：タヌキ生態調査',              url:'/use-cases/raccoon-dog/' },
+  { id:'uc8',  cat:'usecases', name:'事例：カワウ個体管理',              url:'/use-cases/cormorant/' },
+  { id:'uc9',  cat:'usecases', name:'事例：北海道での大規模調査',        url:'/use-cases/hokkaido/' },
+  { id:'uc10', cat:'usecases', name:'事例：自治体の鳥獣害対策',          url:'/use-cases/municipality/' },
+  { id:'uc11', cat:'usecases', name:'事例：国立公園での調査',            url:'/use-cases/national-park/' },
+  { id:'uc12', cat:'usecases', name:'事例：大学・研究機関',              url:'/use-cases/university/' },
+  { id:'uc13', cat:'usecases', name:'事例：森林管理・林野庁',            url:'/use-cases/forestry/' },
+  { id:'uc14', cat:'usecases', name:'事例：農林水産省関連調査',          url:'/use-cases/maff/' },
+  { id:'uc15', cat:'usecases', name:'事例：クマ出没警報システム',        url:'/use-cases/bear-alert/' },
+  { id:'uc16', cat:'usecases', name:'事例：シカ個体数モニタリング',      url:'/use-cases/deer-monitoring/' },
+  { id:'uc17', cat:'usecases', name:'事例：海外調査プロジェクト',        url:'/use-cases/overseas/' },
+  { id:'uc18', cat:'usecases', name:'事例：水中・水辺の動物',            url:'/use-cases/aquatic/' },
+  { id:'uc19', cat:'usecases', name:'事例：夜行性動物の追跡',            url:'/use-cases/nocturnal/' },
+  { id:'uc20', cat:'usecases', name:'事例：長期生態モニタリング',        url:'/use-cases/long-term/' },
+  // 導入プロセス（10）
+  { id:'pc1',  cat:'process',  name:'導入プロセス 概要',                 url:'/process/' },
+  { id:'pc2',  cat:'process',  name:'STEP1：調査目的の設定',             url:'/process/step1/' },
+  { id:'pc3',  cat:'process',  name:'STEP2：機器の選定',                 url:'/process/step2/' },
+  { id:'pc4',  cat:'process',  name:'STEP3：捕獲・装着',                 url:'/process/step3/' },
+  { id:'pc5',  cat:'process',  name:'STEP4：データ収集',                 url:'/process/step4/' },
+  { id:'pc6',  cat:'process',  name:'STEP5：データ分析',                 url:'/process/step5/' },
+  { id:'pc7',  cat:'process',  name:'STEP6：活用・報告',                 url:'/process/step6/' },
+  { id:'pc8',  cat:'process',  name:'動物別：クマ導入ガイド',            url:'/process/bear/' },
+  { id:'pc9',  cat:'process',  name:'動物別：シカ導入ガイド',            url:'/process/deer/' },
+  { id:'pc10', cat:'process',  name:'動物別：鳥類導入ガイド',            url:'/process/birds/' },
+  // ブログ（7）
+  { id:'bl1',  cat:'blog',     name:'ブログ 一覧',                       url:'/blog/' },
+  { id:'bl2',  cat:'blog',     name:'記事：GPSテレメトリーとは',         url:'/blog/gps-telemetry/' },
+  { id:'bl3',  cat:'blog',     name:'記事：VHF vs GPS 比較',             url:'/blog/vhf-vs-gps/' },
+  { id:'bl4',  cat:'blog',     name:'記事：動物捕獲・装着の基礎',        url:'/blog/collar-fitting/' },
+  { id:'bl5',  cat:'blog',     name:'記事：ANIMAL MAPの使い方',          url:'/blog/animal-map-guide/' },
+  { id:'bl6',  cat:'blog',     name:'記事：海外の野生動物追跡事例',      url:'/blog/overseas-cases/' },
+  { id:'bl7',  cat:'blog',     name:'カテゴリーページ',                  url:'/blog/category/' },
+  // ニュース（5）
+  { id:'nw1',  cat:'news',     name:'ニュース 一覧',                     url:'/news/' },
+  { id:'nw2',  cat:'news',     name:'展示会情報',                        url:'/news/exhibition/' },
+  { id:'nw3',  cat:'news',     name:'新製品情報',                        url:'/news/new-products/' },
+  { id:'nw4',  cat:'news',     name:'プレスリリース',                    url:'/news/press/' },
+  { id:'nw5',  cat:'news',     name:'カテゴリーページ',                  url:'/news/category/' },
+  // その他（10）
+  { id:'ot1',  cat:'other',    name:'製品サポート',                      url:'/support/' },
+  { id:'ot2',  cat:'other',    name:'よくある質問（FAQ）',               url:'/faq/' },
+  { id:'ot3',  cat:'other',    name:'採用情報',                          url:'/recruit/' },
+  { id:'ot4',  cat:'other',    name:'会社沿革',                          url:'/company/history/' },
+  { id:'ot5',  cat:'other',    name:'アクセス・地図',                    url:'/company/access/' },
+  { id:'ot6',  cat:'other',    name:'グループ会社',                      url:'/company/group/' },
+  { id:'ot7',  cat:'other',    name:'特定商取引法に基づく表示',          url:'/legal/' },
+  { id:'ot8',  cat:'other',    name:'海外パートナー',                    url:'/overseas/' },
+  { id:'ot9',  cat:'other',    name:'メディア掲載',                      url:'/media/' },
+  { id:'ot10', cat:'other',    name:'リンク集',                          url:'/links/' },
+];
+
+const CATS = [
+  { id:'fixed',    label:'固定ページ',     icon:'📄' },
+  { id:'products', label:'製品情報',       icon:'📦' },
+  { id:'usecases', label:'活用事例',       icon:'🦌' },
+  { id:'process',  label:'導入プロセス',   icon:'🔄' },
+  { id:'blog',     label:'ブログ・知識',   icon:'📝' },
+  { id:'news',     label:'ニュース',       icon:'📢' },
+  { id:'other',    label:'その他',         icon:'🔗' },
+];
+
+const MILESTONES_DEF = [
+  { id:'m3', month:'2026年3月', goal:'ドキュメント整備・Figmaデザイン開始', tasks:'フォルダ整備 / Figmaファイル作成 / デザイントークン定義' },
+  { id:'m4', month:'2026年4月', goal:'デザイン完成・Framer実装開始',         tasks:'全ページデザイン / Framerプロジェクト作成 / CMS構築' },
+  { id:'m5', month:'2026年5月', goal:'コンテンツ移行（87ページ）',           tasks:'WordPress移行 / リダイレクト設定 / SEO設定' },
+  { id:'m6', month:'2026年6月', goal:'テスト・公開',                         tasks:'動作テスト / クライアント確認 / ドメイン切替' },
+];
+
+const COMPS_DEF = [
+  { id:'c1',  name:'Header',          group:'グローバル' },
+  { id:'c2',  name:'Footer',          group:'グローバル' },
+  { id:'c3',  name:'CTA Section',     group:'グローバル' },
+  { id:'c4',  name:'Button Primary',  group:'共通UI' },
+  { id:'c5',  name:'Button Secondary',group:'共通UI' },
+  { id:'c6',  name:'Card（製品）',    group:'共通UI' },
+  { id:'c7',  name:'Card（ニュース）',group:'共通UI' },
+  { id:'c8',  name:'Card（事例）',    group:'共通UI' },
+  { id:'c9',  name:'Breadcrumb',      group:'共通UI' },
+  { id:'c10', name:'Tag / Badge',     group:'共通UI' },
+  { id:'c11', name:'Hero Section',    group:'ページ固有' },
+  { id:'c12', name:'Product Grid',    group:'ページ固有' },
+  { id:'c13', name:'Step Flow',       group:'ページ固有' },
+  { id:'c14', name:'Case Study Layout',group:'ページ固有'},
+];
+
+const STATUS_CYCLE = { '':'wip', 'wip':'done', 'done':'' };
+const STATUS_LABEL = { '':'未着手', 'wip':'作業中', 'done':'完了' };
+
+// ══════════════════════════════════════════════
+//  Firebase 設定・データ管理
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBnV5a3_4W-M_oVZRpbNZAvSnf_QSw1R2E",
+  authDomain: "tracking21-dashboard.firebaseapp.com",
+  databaseURL: "https://tracking21-dashboard-default-rtdb.firebaseio.com",
+  projectId: "tracking21-dashboard",
+  storageBucket: "tracking21-dashboard.firebasestorage.app",
+  messagingSenderId: "58826312362",
+  appId: "1:58826312362:web:932867b5f38362b01e1ed3"
+};
+firebase.initializeApp(firebaseConfig);
+const dbRef = firebase.database().ref('dashboard');
+const CLIENT_ID = Math.random().toString(36).substr(2, 9);
+
+function defaultData() {
+  const pages = {}, milestones = {}, comps = {};
+  PAGES.forEach(p => pages[p.id] = '');
+  MILESTONES_DEF.forEach(m => milestones[m.id] = 'pending');
+  COMPS_DEF.forEach(c => comps[c.id] = '');
+  milestones['m3'] = 'wip';
+  return { pages, milestones, comps, notes: '', updatedAt: '', updatedBy: '' };
+}
+
+let data = defaultData();
+let firstLoad = true;
+
+// リアルタイム同期：Firebase のデータが変わると自動で画面に反映
+dbRef.on('value', (snapshot) => {
+  const val = snapshot.val();
+  if (!val) {
+    dbRef.set(data); // 初回：初期データを書き込む
+    renderAll();
+    firstLoad = false;
+    return;
+  }
+  if (val.updatedBy === CLIENT_ID) return; // 自分の保存はスキップ
+  data = val;
+  if (!data.gantt) data.gantt = JSON.parse(JSON.stringify(GANTT_DEFAULT));
+  renderAll();
+  if (!firstLoad) toast('🔄 最新データを受信しました');
+  firstLoad = false;
+});
+
+function save() {
+  data.updatedAt = new Date().toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  data.updatedBy = CLIENT_ID;
+  dbRef.set(data);
+  document.getElementById('lastUpdated').textContent = `最終更新: ${data.updatedAt}`;
+}
+
+// ══════════════════════════════════════════════
+//  Toast
+// ══════════════════════════════════════════════
+let toastT = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════════════
+//  サマリカード
+// ══════════════════════════════════════════════
+function renderSummary() {
+  const total = PAGES.length;
+  const done  = Object.values(data.pages).filter(v=>v==='done').length;
+  const wip   = Object.values(data.pages).filter(v=>v==='wip').length;
+  const msDone= Object.values(data.milestones).filter(v=>v==='done').length;
+  const cDone = Object.values(data.comps).filter(v=>v==='done').length;
+  const pct   = Math.round(done/total*100);
+
+  document.getElementById('summaryCards').innerHTML = `
+    <div class="sum-card">
+      <div class="sum-val">${pct}%</div>
+      <div class="sum-sub">全体進捗</div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val">${done}</div>
+      <div class="sum-sub">完了ページ / ${total}</div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${done/total*100}%;background:#34d399"></div></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val">${wip}</div>
+      <div class="sum-sub">作業中ページ</div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${wip/total*100}%;background:#fbbf24"></div></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val">${total-done-wip}</div>
+      <div class="sum-sub">未着手ページ</div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${(total-done-wip)/total*100}%;background:#f87171"></div></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val">${msDone}/4</div>
+      <div class="sum-sub">マイルストーン</div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${msDone/4*100}%"></div></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val">${cDone}/${COMPS_DEF.length}</div>
+      <div class="sum-sub">コンポーネント</div>
+      <div class="sum-bar"><div class="sum-bar-fill" style="width:${cDone/COMPS_DEF.length*100}%"></div></div>
+    </div>
+  `;
+
+  // 総計バッジ更新
+  document.getElementById('totalDone').textContent = `完了 ${done}/${total}`;
+  document.getElementById('totalWip').textContent  = `作業中 ${wip}`;
+}
+
+// ══════════════════════════════════════════════
+//  マイルストーン
+// ══════════════════════════════════════════════
+function renderMilestones() {
+  document.getElementById('milestones').innerHTML = MILESTONES_DEF.map(m => {
+    const s = data.milestones[m.id] || 'pending';
+    return `<div class="milestone">
+      <div class="ms-month">${m.month}</div>
+      <div>
+        <div class="ms-goal">${m.goal}</div>
+        <div class="ms-tasks">${m.tasks}</div>
+      </div>
+      <div class="ms-status">
+        <select class="status-sel ${s}" data-mid="${m.id}">
+          <option value="pending" ${s==='pending'?'selected':''}>未着手</option>
+          <option value="wip"     ${s==='wip'    ?'selected':''}>進行中</option>
+          <option value="done"    ${s==='done'   ?'selected':''}>完了</option>
+        </select>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('select.status-sel').forEach(el => {
+    el.addEventListener('change', e => {
+      const mid = e.target.dataset.mid;
+      data.milestones[mid] = e.target.value;
+      e.target.className = `status-sel ${e.target.value}`;
+      save(); renderSummary();
+    });
+  });
+}
+
+// ══════════════════════════════════════════════
+//  ページリスト
+// ══════════════════════════════════════════════
+function renderPageList() {
+  const container = document.getElementById('pageList');
+  container.innerHTML = '';
+
+  CATS.forEach(cat => {
+    const pages  = PAGES.filter(p => p.cat === cat.id);
+    const done   = pages.filter(p => data.pages[p.id]==='done').length;
+    const wip    = pages.filter(p => data.pages[p.id]==='wip').length;
+    const pct    = Math.round(done/pages.length*100);
+
+    const sec = document.createElement('div');
+    sec.className = 'cat-section';
+    sec.innerHTML = `
+      <div class="cat-header" data-cat="${cat.id}">
+        <span style="font-size:1.1rem">${cat.icon}</span>
+        <span class="cat-name">${cat.label}</span>
+        <span class="cat-prog">${done}/${pages.length}</span>
+        <div class="cat-bar"><div class="cat-bar-fill" style="width:${pct}%"></div></div>
+        <span class="cat-arrow" data-arrow="${cat.id}">▶</span>
+      </div>
+      <div class="cat-body" id="catBody-${cat.id}">
+        ${pages.map((p,i) => {
+          const s = data.pages[p.id] || '';
+          return `<div class="page-row">
+            <span class="page-num">${i+1}</span>
+            <span class="page-name">${p.name}</span>
+            <span class="page-url">${p.url}</span>
+            <button class="page-status-btn s-${s||'todo'}" data-pid="${p.id}">${STATUS_LABEL[s]}</button>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+    container.appendChild(sec);
+
+    // カテゴリ展開
+    sec.querySelector('.cat-header').addEventListener('click', () => {
+      const body  = document.getElementById(`catBody-${cat.id}`);
+      const arrow = sec.querySelector(`[data-arrow="${cat.id}"]`);
+      body.classList.toggle('open');
+      arrow.classList.toggle('open');
+    });
+  });
+
+  // ステータスボタン
+  container.addEventListener('click', e => {
+    const btn = e.target.closest('.page-status-btn');
+    if (!btn) return;
+    const pid = btn.dataset.pid;
+    const cur = data.pages[pid] || '';
+    const next = STATUS_CYCLE[cur];
+    data.pages[pid] = next;
+    btn.className = `page-status-btn s-${next||'todo'}`;
+    btn.textContent = STATUS_LABEL[next];
+    save(); renderSummary(); updateCatBar(pid);
+  });
+}
+
+function updateCatBar(pid) {
+  const p = PAGES.find(x=>x.id===pid); if (!p) return;
+  const pages = PAGES.filter(x=>x.cat===p.cat);
+  const done  = pages.filter(x=>data.pages[x.id]==='done').length;
+  const fill  = document.querySelector(`[data-cat="${p.cat}"] .cat-bar-fill`);
+  const prog  = document.querySelector(`[data-cat="${p.cat}"] .cat-prog`);
+  if (fill) fill.style.width = (done/pages.length*100)+'%';
+  if (prog) prog.textContent = `${done}/${pages.length}`;
+}
+
+// ══════════════════════════════════════════════
+//  コンポーネント
+// ══════════════════════════════════════════════
+function renderComps() {
+  document.getElementById('compGrid').innerHTML = COMPS_DEF.map(c => {
+    const s = data.comps[c.id] || '';
+    const check = s==='done' ? '✓' : s==='wip' ? '…' : '';
+    return `<div class="comp-item ${s}" data-cid="${c.id}" title="クリックで状態変更">
+      <div class="comp-check">${check}</div>
+      <span class="comp-name">${c.name}</span>
+      <span class="comp-badge">${c.group}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('compGrid').addEventListener('click', e => {
+    const item = e.target.closest('.comp-item');
+    if (!item) return;
+    const cid = item.dataset.cid;
+    const cur = data.comps[cid] || '';
+    const next = STATUS_CYCLE[cur];
+    data.comps[cid] = next;
+    const check = next==='done'?'✓':next==='wip'?'…':'';
+    item.className = `comp-item ${next}`;
+    item.querySelector('.comp-check').textContent = check;
+    save(); renderSummary();
+  });
+}
+
+// ══════════════════════════════════════════════
+//  メモ
+// ══════════════════════════════════════════════
+function initNotes() {
+  const el = document.getElementById('notesArea');
+  el.value = data.notes || '';
+  let t = null;
+  el.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => { data.notes = el.value; save(); }, 600);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  同期（エクスポート / インポート）
+// ══════════════════════════════════════════════
+function exportCode() {
+  try {
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    navigator.clipboard.writeText(code).then(() => toast('📤 コードをコピーしました！佐藤さんに送ってください'));
+  } catch(e) { toast('コピーに失敗しました'); }
+}
+
+function openImport() {
+  document.getElementById('syncCodeArea').value = '';
+  document.getElementById('syncOverlay').classList.add('show');
+}
+function closeImport() {
+  document.getElementById('syncOverlay').classList.remove('show');
+}
+function doImport() {
+  const code = document.getElementById('syncCodeArea').value.trim();
+  if (!code) { toast('コードを入力してください'); return; }
+  try {
+    const imported = JSON.parse(decodeURIComponent(escape(atob(code))));
+    data = imported;
+    data.updatedBy = CLIENT_ID;
+    dbRef.set(data);
+    closeImport();
+    renderAll();
+    toast('✅ 同期完了！最新の状態を読み込みました');
+  } catch(e) { toast('⚠️ コードが正しくありません'); }
+}
+
+document.getElementById('btnExport').addEventListener('click', exportCode);
+document.getElementById('btnImport').addEventListener('click', openImport);
+document.getElementById('syncCancel').addEventListener('click', closeImport);
+document.getElementById('syncConfirm').addEventListener('click', doImport);
+document.getElementById('syncOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeImport(); });
+
+// ══════════════════════════════════════════════
+//  リンクカード
+// ══════════════════════════════════════════════
+const LINKS = [
+  { icon:'🌐', title:'現行サイト',        desc:'tracking21.jp（公開中）',    url:'https://www.tracking21.jp/' },
+  { icon:'🎨', title:'Figma（デザイン）', desc:'デザインファイル',            url:'#figma' },
+  { icon:'⚡', title:'Framer（実装）',    desc:'Framerプロジェクト',          url:'#framer' },
+  { icon:'📝', title:'WordPress管理',     desc:'旧サイト管理画面',            url:'#wp-admin' },
+  { icon:'📁', title:'Googleドライブ',    desc:'プロジェクト資料フォルダ',    url:'#drive' },
+  { icon:'📋', title:'議事録',            desc:'ミーティングメモ',            url:'#notes' },
+];
+
+function renderLinks() {
+  document.getElementById('linkGrid').innerHTML = LINKS.map(l => `
+    <a class="link-card" href="${l.url}" target="_blank" rel="noopener">
+      <span class="link-icon">${l.icon}</span>
+      <div class="link-body">
+        <div class="link-title">${l.title}</div>
+        <div class="link-desc">${l.desc}</div>
+      </div>
+      <span class="link-ext">↗</span>
+    </a>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  ガントチャート v2
+// ══════════════════════════════════════════════
+const MS_STATUS_LABEL = { pending:'未着手', wip:'進行中', done:'完了' };
+
+const GANTT_DEFAULT = {
+  cols: ['3月前半','3月後半','4月前半','4月後半','5月前半','5月後半','6月前半','6月後半'],
+  tasks: [
+    { id:'gt1',  name:'フォルダ整備・環境構築',      start:0, end:0, status:'wip'     },
+    { id:'gt2',  name:'Figmaファイル作成',            start:0, end:1, status:'wip'     },
+    { id:'gt3',  name:'デザイントークン定義',          start:1, end:1, status:'pending' },
+    { id:'gt4',  name:'全ページデザイン',              start:2, end:3, status:'pending' },
+    { id:'gt5',  name:'Framerプロジェクト作成',        start:2, end:2, status:'pending' },
+    { id:'gt6',  name:'CMS構築（Framer）',             start:3, end:3, status:'pending' },
+    { id:'gt7',  name:'コンテンツ移行（87ページ）',   start:4, end:5, status:'pending' },
+    { id:'gt8',  name:'リダイレクト設定',              start:5, end:5, status:'pending' },
+    { id:'gt9',  name:'SEO設定',                      start:4, end:5, status:'pending' },
+    { id:'gt10', name:'動作テスト',                    start:6, end:6, status:'pending' },
+    { id:'gt11', name:'クライアント確認',              start:6, end:7, status:'pending' },
+    { id:'gt12', name:'ドメイン切替・公開',            start:7, end:7, status:'pending' },
+  ]
+};
+
+function getGanttData() {
+  if (!data.gantt) data.gantt = JSON.parse(JSON.stringify(GANTT_DEFAULT));
+  return data.gantt;
+}
+
+function renderGantt() {
+  const g = getGanttData();
+  const cols = g.cols;
+  const tasks = g.tasks;
+
+  const colOpts = cols.map((c, i) => `<option value="${i}">${c}</option>`).join('');
+
+  let html = `<table class="gantt-table"><thead><tr>
+    <th class="gantt-name-head">タスク名（クリックで編集）</th>
+    <th class="gantt-st-head">状態</th>
+    <th class="gantt-st-head" style="font-size:0.55rem">開始</th>
+    <th class="gantt-st-head" style="font-size:0.55rem">終了</th>`;
+  cols.forEach((col, i) => {
+    html += `<th class="gantt-col-head"><input class="gantt-col-input" value="${col}" data-ci="${i}" title="クリックで期間名を編集"></th>`;
+  });
+  html += `<th class="gantt-st-head"></th></tr></thead><tbody>`;
+
+  tasks.forEach(task => {
+    html += `<tr class="gantt-task-row">
+      <td class="gantt-task-name-cell"><input class="gantt-name-input" value="${task.name}" data-tid="${task.id}" title="クリックでタスク名を編集"></td>
+      <td class="gantt-status-cell"><span class="gantt-status-dot ${task.status}" data-tid="${task.id}" title="${MS_STATUS_LABEL[task.status]}（クリックで変更）"></span></td>
+      <td class="gantt-range-cell"><select class="gantt-sel" data-tid="${task.id}" data-type="start">${colOpts.replace(`value="${task.start}"`, `value="${task.start}" selected`)}</select></td>
+      <td class="gantt-range-cell"><select class="gantt-sel" data-tid="${task.id}" data-type="end">${colOpts.replace(`value="${task.end}"`, `value="${task.end}" selected`)}</select></td>`;
+    cols.forEach((_, ci) => {
+      const inBar = ci >= task.start && ci <= task.end;
+      if (inBar) {
+        let pos = (task.start === task.end) ? 'only' : ci === task.start ? 'start' : ci === task.end ? 'end' : 'middle';
+        html += `<td class="gantt-cell-bar gantt-bar-${pos} gantt-bar-${task.status}"><div class="gantt-bar-inner"></div></td>`;
+      } else {
+        html += `<td class="gantt-cell-empty"></td>`;
+      }
+    });
+    html += `<td style="background:#fff;text-align:center"><button class="gantt-del-btn" data-tid="${task.id}" title="削除">✕</button></td></tr>`;
+  });
+
+  html += `</tbody></table>
+  <button class="gantt-add-btn" id="ganttAddBtn">＋ タスクを追加</button>
+  <div class="gantt-legend">
+    <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:#cbd5e1"></div>未着手</div>
+    <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:var(--yellow)"></div>進行中</div>
+    <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:var(--green)"></div>完了</div>
+    <span style="font-size:0.62rem;color:var(--t3);margin-left:8px">※ 列名・タスク名はクリックで編集できます</span>
+  </div>`;
+
+  document.getElementById('ganttChart').innerHTML = html;
+
+  // 列名を編集
+  document.querySelectorAll('.gantt-col-input').forEach(input => {
+    input.addEventListener('change', e => {
+      getGanttData().cols[parseInt(e.target.dataset.ci)] = e.target.value;
+      save(); renderGantt();
+    });
+  });
+
+  // タスク名を編集
+  document.querySelectorAll('.gantt-name-input').forEach(input => {
+    input.addEventListener('change', e => {
+      const task = getGanttData().tasks.find(t => t.id === e.target.dataset.tid);
+      if (task) { task.name = e.target.value; save(); }
+    });
+  });
+
+  // 状態ドットをクリックで切り替え
+  document.querySelectorAll('.gantt-status-dot').forEach(dot => {
+    dot.addEventListener('click', e => {
+      const task = getGanttData().tasks.find(t => t.id === e.target.dataset.tid);
+      if (!task) return;
+      task.status = { pending:'wip', wip:'done', done:'pending' }[task.status];
+      save(); renderGantt();
+    });
+  });
+
+  // 開始・終了期間を変更
+  document.querySelectorAll('.gantt-sel').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const task = getGanttData().tasks.find(t => t.id === e.target.dataset.tid);
+      if (!task) return;
+      const val = parseInt(e.target.value);
+      if (e.target.dataset.type === 'start') {
+        task.start = Math.min(val, task.end);
+      } else {
+        task.end = Math.max(val, task.start);
+      }
+      save(); renderGantt();
+    });
+  });
+
+  // タスクを削除
+  document.querySelectorAll('.gantt-del-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const g = getGanttData();
+      g.tasks = g.tasks.filter(t => t.id !== e.target.dataset.tid);
+      save(); renderGantt();
+    });
+  });
+
+  // タスクを追加
+  document.getElementById('ganttAddBtn').addEventListener('click', () => {
+    const g = getGanttData();
+    const newId = 'gt' + Date.now();
+    g.tasks.push({ id: newId, name: '新しいタスク', start: 0, end: 0, status: 'pending' });
+    save(); renderGantt();
+  });
+}
+
+// ══════════════════════════════════════════════
+//  全体レンダリング
+// ══════════════════════════════════════════════
+function renderAll() {
+  renderSummary();
+  renderMilestones();
+  renderPageList();
+  renderComps();
+  renderLinks();
+  renderGantt();
+  initNotes();
+  const el = document.getElementById('lastUpdated');
+  if (data.updatedAt) el.textContent = `最終更新: ${data.updatedAt}`;
+}
+
+// Firebase の onValue が renderAll() を呼ぶので、ここでは呼ばない
+</script>
+</body>
+</html>
