@@ -272,16 +272,38 @@
   .link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 10px; }
   .link-card {
     display: flex; align-items: center; gap: 12px;
-    padding: 14px 16px; background: var(--sur2);
+    padding: 12px 14px; background: var(--sur2);
     border: 1px solid var(--bdr); border-radius: 10px;
-    text-decoration: none; color: inherit; transition: all 0.15s;
+    text-decoration: none; color: inherit; transition: all 0.15s; position: relative;
   }
-  .link-card:hover { border-color: var(--bdr-hi); box-shadow: var(--shadow-sm); background: #f0fdf9; transform: translateY(-1px); }
+  .link-card:hover { border-color: var(--bdr-hi); box-shadow: var(--shadow-sm); background: #f0fdf9; }
   .link-icon { font-size: 1.5rem; flex-shrink: 0; }
   .link-body { flex: 1; min-width: 0; }
   .link-title { font-size: 0.8rem; font-weight: 600; color: var(--t1); }
   .link-desc  { font-size: 0.65rem; color: var(--t3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .link-ext   { font-size: 0.65rem; color: var(--t3); flex-shrink: 0; }
+  .link-actions { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .link-open-btn { font-size: 0.65rem; color: var(--t3); text-decoration: none; padding: 2px 4px; border-radius: 3px; transition: color 0.13s; }
+  .link-open-btn:hover { color: var(--teal); }
+  .link-edit-btn, .link-del-btn { background: none; border: none; cursor: pointer; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; transition: all 0.13s; color: var(--t3); }
+  .link-edit-btn:hover { color: var(--teal); background: var(--teal-lo); }
+  .link-del-btn:hover  { color: var(--red);  background: rgba(220,38,38,0.08); }
+  .link-add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 14px; background: var(--sur2);
+    border: 1px dashed var(--bdr); border-radius: 10px;
+    cursor: pointer; font-size: 0.78rem; color: var(--t2);
+    transition: all 0.15s; font-family: inherit;
+  }
+  .link-add-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-lo); }
+  /* リンク編集モーダル */
+  .link-modal-field { margin-bottom: 12px; }
+  .link-modal-label { font-size: 0.7rem; font-weight: 700; color: var(--t2); margin-bottom: 4px; display: block; }
+  .link-modal-input {
+    width: 100%; background: var(--sur2); border: 1.5px solid var(--bdr);
+    border-radius: 8px; padding: 8px 12px; font-size: 0.82rem;
+    color: var(--t1); font-family: inherit; outline: none; transition: border-color 0.15s;
+  }
+  .link-modal-input:focus { border-color: var(--teal); }
 
   /* ─ ガントチャート v2 ─ */
   .gantt-wrap { overflow-x: auto; }
@@ -438,6 +460,33 @@
   <div class="card section-gap">
     <div class="card-title">リンク集</div>
     <div class="link-grid" id="linkGrid"></div>
+  </div>
+
+  <!-- リンク編集モーダル -->
+  <div class="overlay" id="linkOverlay">
+    <div class="modal-box">
+      <h3 id="linkModalTitle">リンクを追加</h3>
+      <div class="link-modal-field">
+        <label class="link-modal-label">アイコン（絵文字）</label>
+        <input class="link-modal-input" id="linkIconInput" placeholder="例：📊" maxlength="4">
+      </div>
+      <div class="link-modal-field">
+        <label class="link-modal-label">タイトル</label>
+        <input class="link-modal-input" id="linkTitleInput" placeholder="例：スプレッドシート">
+      </div>
+      <div class="link-modal-field">
+        <label class="link-modal-label">説明（任意）</label>
+        <input class="link-modal-input" id="linkDescInput" placeholder="例：進捗管理シート">
+      </div>
+      <div class="link-modal-field">
+        <label class="link-modal-label">URL</label>
+        <input class="link-modal-input" id="linkUrlInput" placeholder="https://...">
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-ghost" id="linkModalCancel">キャンセル</button>
+        <button class="btn btn-teal" id="linkModalSave">保存</button>
+      </div>
+    </div>
   </div>
 
   <!-- ─ ガントチャート ─ -->
@@ -945,27 +994,98 @@ document.getElementById('syncOverlay').addEventListener('click', e => { if(e.tar
 // ══════════════════════════════════════════════
 //  リンクカード
 // ══════════════════════════════════════════════
-const LINKS = [
-  { icon:'🌐', title:'現行サイト',        desc:'tracking21.jp（公開中）',    url:'https://www.tracking21.jp/' },
-  { icon:'🎨', title:'Figma（デザイン）', desc:'デザインファイル',            url:'#figma' },
-  { icon:'⚡', title:'Framer（実装）',    desc:'Framerプロジェクト',          url:'#framer' },
-  { icon:'📝', title:'WordPress管理',     desc:'旧サイト管理画面',            url:'#wp-admin' },
-  { icon:'📁', title:'Googleドライブ',    desc:'プロジェクト資料フォルダ',    url:'#drive' },
-  { icon:'📋', title:'議事録',            desc:'ミーティングメモ',            url:'#notes' },
+const LINKS_DEFAULT = [
+  { id:'lk1', icon:'🌐', title:'現行サイト',        desc:'tracking21.jp（公開中）',    url:'https://www.tracking21.jp/' },
+  { id:'lk2', icon:'🎨', title:'Figma（デザイン）', desc:'デザインファイル',            url:'#figma' },
+  { id:'lk3', icon:'⚡', title:'Framer（実装）',    desc:'Framerプロジェクト',          url:'#framer' },
+  { id:'lk4', icon:'📝', title:'WordPress管理',     desc:'旧サイト管理画面',            url:'#wp-admin' },
+  { id:'lk5', icon:'📁', title:'Googleドライブ',    desc:'プロジェクト資料フォルダ',    url:'#drive' },
+  { id:'lk6', icon:'📊', title:'スプレッドシート①', desc:'',                            url:'' },
+  { id:'lk7', icon:'📊', title:'スプレッドシート②', desc:'',                            url:'' },
 ];
 
+function getLinks() {
+  if (!data.links) data.links = JSON.parse(JSON.stringify(LINKS_DEFAULT));
+  return data.links;
+}
+
+let linkEditId = null; // 編集中のリンクID（nullなら新規追加）
+
 function renderLinks() {
-  document.getElementById('linkGrid').innerHTML = LINKS.map(l => `
-    <a class="link-card" href="${l.url}" target="_blank" rel="noopener">
-      <span class="link-icon">${l.icon}</span>
+  const links = getLinks();
+  const grid = document.getElementById('linkGrid');
+  grid.innerHTML = links.map(l => `
+    <div class="link-card">
+      <span class="link-icon">${l.icon || '🔗'}</span>
       <div class="link-body">
         <div class="link-title">${l.title}</div>
-        <div class="link-desc">${l.desc}</div>
+        <div class="link-desc">${l.desc || l.url || ''}</div>
       </div>
-      <span class="link-ext">↗</span>
-    </a>
-  `).join('');
+      <div class="link-actions">
+        <a class="link-open-btn" href="${l.url || '#'}" target="_blank" rel="noopener" title="開く">↗</a>
+        <button class="link-edit-btn" data-lid="${l.id}" title="編集">✏️</button>
+        <button class="link-del-btn"  data-lid="${l.id}" title="削除">✕</button>
+      </div>
+    </div>
+  `).join('') + `<button class="link-add-btn" id="linkAddBtn">＋ リンクを追加</button>`;
+
+  // 編集
+  grid.querySelectorAll('.link-edit-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const link = getLinks().find(l => l.id === e.target.dataset.lid);
+      if (!link) return;
+      linkEditId = link.id;
+      document.getElementById('linkModalTitle').textContent = 'リンクを編集';
+      document.getElementById('linkIconInput').value  = link.icon  || '';
+      document.getElementById('linkTitleInput').value = link.title || '';
+      document.getElementById('linkDescInput').value  = link.desc  || '';
+      document.getElementById('linkUrlInput').value   = link.url   || '';
+      document.getElementById('linkOverlay').classList.add('show');
+    });
+  });
+
+  // 削除
+  grid.querySelectorAll('.link-del-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      data.links = getLinks().filter(l => l.id !== e.target.dataset.lid);
+      save(); renderLinks();
+    });
+  });
+
+  // 追加ボタン
+  document.getElementById('linkAddBtn').addEventListener('click', () => {
+    linkEditId = null;
+    document.getElementById('linkModalTitle').textContent = 'リンクを追加';
+    document.getElementById('linkIconInput').value  = '';
+    document.getElementById('linkTitleInput').value = '';
+    document.getElementById('linkDescInput').value  = '';
+    document.getElementById('linkUrlInput').value   = '';
+    document.getElementById('linkOverlay').classList.add('show');
+  });
 }
+
+// モーダルの保存・キャンセル
+document.getElementById('linkModalCancel').addEventListener('click', () => {
+  document.getElementById('linkOverlay').classList.remove('show');
+});
+document.getElementById('linkModalSave').addEventListener('click', () => {
+  const icon  = document.getElementById('linkIconInput').value.trim()  || '🔗';
+  const title = document.getElementById('linkTitleInput').value.trim();
+  const desc  = document.getElementById('linkDescInput').value.trim();
+  const url   = document.getElementById('linkUrlInput').value.trim();
+  if (!title) { alert('タイトルを入力してください'); return; }
+  if (linkEditId) {
+    const link = getLinks().find(l => l.id === linkEditId);
+    if (link) { link.icon = icon; link.title = title; link.desc = desc; link.url = url; }
+  } else {
+    getLinks().push({ id: 'lk_' + Date.now(), icon, title, desc, url });
+  }
+  save(); renderLinks();
+  document.getElementById('linkOverlay').classList.remove('show');
+});
+document.getElementById('linkOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) document.getElementById('linkOverlay').classList.remove('show');
+});
 
 // ══════════════════════════════════════════════
 //  ガントチャート v2
